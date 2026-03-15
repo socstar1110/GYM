@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的健身永久紀錄助手</title>
+    <style>
+        :root { --primary: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #8b5cf6; --success: #10b981; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 15px; max-width: 800px; margin: auto; }
+        h2 { text-align: center; color: var(--primary); }
+        .section { background: var(--card); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .flex-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        label { font-size: 12px; color: #64748b; margin-bottom: 4px; display: block; font-weight: bold; }
+        select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 5px; }
+        .btn-filter { background: var(--accent); color: white; }
+        .btn-reset { background: #64748b; color: white; }
+        .btn-backup { background: #f1f5f9; color: #475569; font-size: 12px; border: 1px solid #e2e8f0; }
+        
+        /* 紀錄顯示樣式 */
+        .date-container { margin-top: 25px; }
+        .date-title { font-size: 1.2em; font-weight: 800; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px; }
+        .program-group { margin-left: 10px; margin-bottom: 20px; border-left: 3px solid var(--accent); padding-left: 15px; }
+        .program-title { font-size: 0.95em; font-weight: bold; color: var(--accent); margin-bottom: 8px; }
+        .exercise-item { background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid #f1f5f9; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .ex-info strong { color: #0f172a; font-size: 15px; }
+        .ex-info span { font-size: 13px; color: #64748b; margin-left: 8px; }
+        .btn-delete { color: #f87171; background: none; font-size: 18px; }
+        .highlight-date { background: #dbeafe; padding: 2px 8px; border-radius: 4px; margin-right: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>💪 健身訓練紀錄助手</h2>
+
+    <div class="section">
+        <div class="flex-group">
+            <div style="flex: 1;">
+                <label>計畫存檔</label>
+                <select id="programSelect" onchange="updateExerciseOptions()">
+                    <option value="Leg">Leg (腿)</option>
+                    <option value="Push">Push (推)</option>
+                    <option value="Pull">Pull (拉)</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>日期</label>
+                <input type="date" id="inputDate">
+            </div>
+        </div>
+
+        <div class="flex-group">
+            <div style="flex: 1;">
+                <label>動作名稱</label>
+                <select id="exerciseSelect"></select>
+            </div>
+            <div style="flex: 1; display: none;" id="customExerciseBox">
+                <label>自定義動作</label>
+                <input type="text" id="customExercise" placeholder="輸入名稱">
+            </div>
+        </div>
+
+        <div class="flex-group">
+            <input type="number" id="weight" placeholder="重量 kg">
+            <input type="number" id="sets" placeholder="組數">
+            <input type="number" id="reps" placeholder="次數">
+        </div>
+        <button class="btn-main" onclick="addData()">儲存紀錄</button>
+    </div>
+
+    <div class="section" style="background: #fdf2ff;">
+        <label>🔍 篩選與管理</label>
+        <div class="flex-group">
+            <input type="date" id="filterDate">
+            <button class="btn-filter" onclick="renderDisplay(true)">篩選</button>
+            <button class="btn-reset" onclick="resetFilter()">全部</button>
+        </div>
+        <div class="flex-group" style="margin-top: 10px; justify-content: space-between;">
+            <button class="btn-backup" onclick="exportData()">💾 匯出備份檔</button>
+            <button class="btn-backup" onclick="document.getElementById('importFile').click()">📂 匯入備份檔</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+        </div>
+    </div>
+
+    <div id="displayArea"></div>
+
+    <script>
+        // 設定各分類動作
+        const exerciseLib = {
+            "Leg": ["RDL", "Back Squat", "Leg Press", "Split Squat", "Jump Box", "Leg Extension", "Leg Curl", "Hip Adduction"],
+            "Push": ["Bench Press", "Incline Bench Press", "Shoulder Press", "Dips", "Lateral Raise", "Triceps Extension", "Push Up", "Chest Press Machine"],
+            "Pull": ["Deadlift", "Pull Up", "Lat Pulldown", "Seated Row", "Barbell Row", "Face Pull", "Bicep Curl", "Hammer Curl"]
+        };
+
+        // 從 LocalStorage 讀取資料
+        let gymData = JSON.parse(localStorage.getItem('gymData_vFinal')) || { "Leg": [], "Push": [], "Pull": [] };
+
+        document.getElementById('inputDate').valueAsDate = new Date();
+
+        window.onload = () => {
+            updateExerciseOptions();
+            renderDisplay();
+        };
+
+        function updateExerciseOptions() {
+            const prog = document.getElementById('programSelect').value;
+            const exSelect = document.getElementById('exerciseSelect');
+            const options = exerciseLib[prog] || [];
+            let html = options.map(ex => `<option value="${ex}">${ex}</option>`).join('');
+            html += `<option value="CUSTOM">-- 手動輸入 --</option>`;
+            exSelect.innerHTML = html;
+            toggleCustomInput();
+            exSelect.onchange = toggleCustomInput;
+        }
+
+        function toggleCustomInput() {
+            const isCustom = document.getElementById('exerciseSelect').value === "CUSTOM";
+            document.getElementById('customExerciseBox').style.display = isCustom ? "block" : "none";
+        }
+
+        function addData() {
+            const prog = document.getElementById('programSelect').value;
+            const date = document.getElementById('inputDate').value;
+            const exSelect = document.getElementById('exerciseSelect').value;
+            const ex = exSelect === "CUSTOM" ? document.getElementById('customExercise').value : exSelect;
+            const w = document.getElementById('weight').value;
+            const s = document.getElementById('sets').value;
+            const r = document.getElementById('reps').value;
+
+            if (!date || !ex || !w) return alert("請填寫必要資訊");
+
+            const record = { id: Date.now(), date, ex, w, s, r, prog };
+            if (!gymData[prog]) gymData[prog] = [];
+            gymData[prog].unshift(record);
+            
+            save();
+            renderDisplay();
+            
+            document.getElementById('weight').value = '';
+            document.getElementById('sets').value = '';
+            document.getElementById('reps').value = '';
+        }
+
+        function deleteRecord(prog, id) {
+            if (confirm("確定刪除這筆紀錄嗎？")) {
+                gymData[prog] = gymData[prog].filter(item => item.id !== id);
+                save();
+                renderDisplay();
+            }
+        }
+
+        function renderDisplay(isFiltered = false) {
+            const area = document.getElementById('displayArea');
+            const filterVal = document.getElementById('filterDate').value;
+            area.innerHTML = '';
+
+            let allRecords = [];
+            Object.keys(gymData).forEach(pName => {
+                gymData[pName].forEach(rec => allRecords.push(rec));
+            });
+
+            if (isFiltered && filterVal) {
+                allRecords = allRecords.filter(r => r.date === filterVal);
+            }
+
+            if (allRecords.length === 0) {
+                area.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px;">尚無紀錄 📭</div>`;
+                return;
+            }
+
+            const groupByDate = {};
+            allRecords.forEach(r => {
+                if (!groupByDate[r.date]) groupByDate[r.date] = {};
+                if (!groupByDate[r.date][r.prog]) groupByDate[r.date][r.prog] = [];
+                groupByDate[r.date][r.prog].push(r);
+            });
+
+            const sortedDates = Object.keys(groupByDate).sort((a, b) => new Date(b) - new Date(a));
+
+            sortedDates.forEach(date => {
+                const dateSection = document.createElement('div');
+                dateSection.className = 'date-container';
+                let html = `<div class="date-title"><span class="highlight-date">${date}</span> 訓練清單</div>`;
+                
+                Object.keys(groupByDate[date]).forEach(pName => {
+                    html += `<div class="program-group"><div class="program-title">📂 ${pName}</div>`;
+                    groupByDate[date][pName].forEach(item => {
+                        html += `
+                            <div class="exercise-item">
+                                <div class="ex-info">
+                                    <strong>${item.ex}</strong>
+                                    <span>${item.w}kg × ${item.s}組 × ${item.r}次</span>
+                                </div>
+                                <button class="btn-delete" onclick="deleteRecord('${pName}', ${item.id})">×</button>
+                            </div>`;
+                    });
+                    html += `</div>`;
+                });
+                dateSection.innerHTML = html;
+                area.appendChild(dateSection);
+            });
+        }
+
+        // 保存至瀏覽器
+        function save() {
+            localStorage.setItem('gymData_vFinal', JSON.stringify(gymData));
+        }
+
+        function resetFilter() {
+            document.getElementById('filterDate').value = '';
+            renderDisplay();
+        }
+
+        // 匯出 JSON 備份檔
+        function exportData() {
+            const dataStr = JSON.stringify(gymData);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'gym_backup_' + new Date().toISOString().slice(0,10) + '.json';
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // 匯入備份檔
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (confirm("匯入將會取代目前的紀錄，確定嗎？")) {
+                        gymData = importedData;
+                        save();
+                        renderDisplay();
+                        alert("匯入成功！");
+                    }
+                } catch (err) {
+                    alert("無效的備份檔案");
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
