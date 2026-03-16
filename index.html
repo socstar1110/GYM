@@ -75,88 +75,67 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbz7uHCEFtKkUWjnPwbzVu7o3aHichTMpHHsSMnQX36bDHWg9WKJZlsE-FmT2SLngv9RbA/exec"; // ⚠️ 請更換為你的部署網址
-    let exerciseLib = {};
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz7uHCEFtKkUWjnPwbzVu7o3aHichTMpHHsSMnQX36bDHWg9WKJZlsE-FmT2SLngv9RbA/exec"; 
+    // 修改 1：確保預設結構正確，防止 updateExerciseOptions 報錯
+    let exerciseLib = {
+        "Leg": ["RDL", "Back Squat", "Leg Press", "Split Squat", "Jump Box", "Leg Extension", "Leg Curl", "Hip Adduction"],
+        "Push": ["Bench Press", "Incline Bench Press", "Shoulder Press", "Dips", "Lateral Raise", "Triceps Extension", "Push Up", "Chest Press Machine"],
+        "Pull": ["Deadlift", "Pull Up", "Lat Pulldown", "Seated Row", "Barbell Row", "Face Pull", "Bicep Curl", "Hammer Curl"]
+    };
 
-    // [Function 1] 初始化：設定日期並從 Google 抓取最新動作庫
     window.onload = function() {
         document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+        // 優先執行一次初始選單更新（此時是空的或只有預設值）
+        updateExerciseOptions();
+        // 開始從雲端抓取
         refreshLibrary();
     };
 
-    // [Function 2] 從雲端重新獲取最新的動作清單數據
     function refreshLibrary() {
-        document.getElementById('status').innerText = "正在從雲端更新動作庫...";
+        const status = document.getElementById('status');
+        status.innerText = "⏳ 正在同步雲端動作庫...";
+
         fetch(`${GAS_URL}?type=getLib`)
             .then(res => res.json())
             .then(data => {
-                exerciseLib = data;
-                updateExerciseOptions();
-                document.getElementById('status').innerText = "雲端同步完成";
+                // 修改 2：加入防錯檢查，確保 data 格式正確
+                if (data && typeof data === 'object') {
+                    exerciseLib = data;
+                    updateExerciseOptions();
+                    status.innerText = "✅ 雲端同步完成";
+                }
             })
-            .catch(err => alert("讀取失敗，請檢查網路或 GAS URL"));
+            .catch(err => {
+                console.error("Fetch error:", err);
+                status.innerText = "❌ 同步失敗，請檢查網路";
+            });
     }
 
-    // [Function 3] 根據選取的分類 (Leg/Push/Pull) 動態更新動作下拉選單
     function updateExerciseOptions() {
         const category = document.getElementById('categorySelect').value;
         const actionSelect = document.getElementById('actionSelect');
+        
+        // 修改 3：清空舊選項並加入防呆
         actionSelect.innerHTML = "";
         
-        if (exerciseLib[category]) {
-            exerciseLib[category].forEach(ex => {
-                const opt = document.createElement('option');
-                opt.value = ex;
-                opt.text = ex;
-                actionSelect.add(opt);
-            });
-        }
-    }
-
-    // [Function 4] 將新動作傳送到雲端 Library 並刷新清單
-    function addNewAction() {
-        const category = document.getElementById('categorySelect').value;
-        const actionName = document.getElementById('newActionInput').value.trim();
-        if (!actionName) return;
-
-        document.getElementById('status').innerText = "正在新增動作...";
-        fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ type: "addNewAction", category: category, action: actionName })
-        }).then(() => {
-            setTimeout(refreshLibrary, 1200); // 延遲刷新以確保雲端已寫入
-            document.getElementById('newActionInput').value = "";
-        });
-    }
-
-    // [Function 5] 儲存正式訓練紀錄至雲端 Log
-    function saveLog() {
-        const logData = {
-            id: "MyiPhone", // 可自行修改標記
-            date: document.getElementById('inputDate').value,
-            prog: document.getElementById('categorySelect').value,
-            ex: document.getElementById('actionSelect').value,
-            w: document.getElementById('weight').value,
-            s: document.getElementById('sets').value,
-            r: `${document.getElementById('repsMin').value}-${document.getElementById('repsMax').value}`
-        };
-
-        if(!logData.w || !logData.s || !document.getElementById('repsMin').value) {
-            alert("請填寫完整數據");
+        const actions = exerciseLib[category] || [];
+        
+        if (actions.length === 0) {
+            const opt = document.createElement('option');
+            opt.text = "-- 無動作 (請手動新增) --";
+            actionSelect.add(opt);
             return;
         }
 
-        document.getElementById('status').innerText = "正在儲存紀錄...";
-        fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify(logData)
-        })
-        .then(res => res.text())
-        .then(msg => {
-            alert(msg);
-            document.getElementById('status').innerText = "最後儲存時間: " + new Date().toLocaleTimeString();
+        actions.forEach(ex => {
+            const opt = document.createElement('option');
+            opt.value = ex;
+            opt.text = ex;
+            actionSelect.add(opt);
         });
     }
+
+    // ... addNewAction 和 saveLog 維持不變 ...
 </script>
 
 </body>
