@@ -1,237 +1,124 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的健身同步助手</title>
+    <title>健身訓練紀錄</title>
     <style>
-        :root { --primary: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #8b5cf6; --success: #10b981; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 15px; max-width: 800px; margin: auto; }
-        h2 { text-align: center; color: var(--primary); }
-        .section { background: var(--card); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .flex-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-        label { font-size: 12px; color: #64748b; margin-bottom: 4px; display: block; font-weight: bold; }
-        select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
-        button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-        .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 5px; }
-        .btn-filter { background: var(--accent); color: white; }
-        .btn-reset { background: #64748b; color: white; }
-        .btn-backup { background: #f1f5f9; color: #475569; font-size: 12px; border: 1px solid #e2e8f0; }
-        .sync-badge { font-size: 10px; color: #10b981; display: none; text-align: center; margin-top: 8px; }
-        
-        /* 紀錄顯示樣式 */
-        .date-container { margin-top: 25px; }
-        .date-title { font-size: 1.2em; font-weight: 800; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px; }
-        .program-group { margin-left: 10px; margin-bottom: 20px; border-left: 3px solid var(--accent); padding-left: 15px; }
-        .program-title { font-size: 0.95em; font-weight: bold; color: var(--accent); margin-bottom: 8px; }
-        .exercise-item { background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid #f1f5f9; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .ex-info strong { color: #0f172a; font-size: 15px; }
-        .ex-info span { font-size: 13px; color: #64748b; margin-left: 8px; }
-        .btn-delete { color: #f87171; background: none; font-size: 18px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .range-group { display: flex; gap: 10px; align-items: center; }
+        .range-group input { width: 45%; }
+        button { width: 100%; padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        button:active { background-color: #0056b3; }
+        .add-action-area { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
+        #newActionInput { width: 70%; margin-right: 5%; }
+        #addBtn { width: 25%; background-color: #34c759; padding: 10px; font-size: 14px; }
+        .log-display { margin-top: 20px; font-size: 14px; color: #555; }
     </style>
 </head>
 <body>
 
-    <h2>💪 健身訓練紀錄 (雲端同步版)</h2>
+<div class="card">
+    <h2>💪 訓練紀錄</h2>
 
-    <div class="section">
-        <div class="flex-group">
-            <div style="flex: 1;">
-                <label>計畫存檔</label>
-                <select id="programSelect" onchange="updateExerciseOptions()">
-                    <option value="Leg">Leg (腿)</option>
-                    <option value="Push">Push (推)</option>
-                    <option value="Pull">Pull (拉)</option>
-                </select>
+    <div class="input-group">
+        <label for="actionSelect">選擇動作</label>
+        <select id="actionSelect">
+            <option value="Back Squat">Back Squat (後蹲)</option>
+            <option value="RDL">RDL (羅馬尼亞硬舉)</option>
+            <option value="Leg Press">Leg Press (腿推)</option>
+        </select>
+        
+        <div class="add-action-area">
+            <label>找不到動作？手動新增</label>
+            <div style="display: flex;">
+                <input type="text" id="newActionInput" placeholder="輸入動作名稱">
+                <button type="button" id="addBtn" onclick="addNewAction()">新增</button>
             </div>
-            <div style="flex: 1;">
-                <label>日期</label>
-                <input type="date" id="inputDate">
-            </div>
-        </div>
-
-        <div class="flex-group">
-            <div style="flex: 1;">
-                <label>動作名稱</label>
-                <select id="exerciseSelect"></select>
-            </div>
-            <div style="flex: 1; display: none;" id="customExerciseBox">
-                <label>自定義動作</label>
-                <input type="text" id="customExercise" placeholder="輸入名稱">
-            </div>
-        </div>
-
-        <div class="flex-group">
-            <input type="number" id="weight" placeholder="重量 kg">
-            <input type="number" id="sets" placeholder="組數">
-            <input type="number" id="reps" placeholder="次數">
-        </div>
-        <button class="btn-main" onclick="addData()">儲存並同步到雲端</button>
-        <div id="syncMsg" class="sync-badge">✅ 資料已同步至 Google Sheets</div>
-    </div>
-
-    <div class="section" style="background: #fdf2ff;">
-        <label>🔍 篩選與管理</label>
-        <div class="flex-group">
-            <input type="date" id="filterDate">
-            <button class="btn-filter" onclick="renderDisplay(true)">篩選</button>
-            <button class="btn-reset" onclick="resetFilter()">全部</button>
-        </div>
-        <div class="flex-group" style="margin-top: 10px; justify-content: space-between;">
-            <button class="btn-backup" onclick="exportData()">💾 匯出備份</button>
-            <button class="btn-backup" onclick="document.getElementById('importFile').click()">📂 匯入備份</button>
-            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
         </div>
     </div>
 
-    <div id="displayArea"></div>
+    <div class="input-group">
+        <label>重量 (kg)</label>
+        <input type="number" id="weight" placeholder="0">
+    </div>
 
-    <script>
-        // --- 設定區 ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7uHCEFtKkUWjnPwbzVu7o3aHichTMpHHsSMnQX36bDHWg9WKJZlsE-FmT2SLngv9RbA/exec"; 
+    <div class="input-group">
+        <label>次數範圍 (Reps Range)</label>
+        <div class="range-group">
+            <input type="number" id="repsMin" placeholder="最小">
+            <span>~</span>
+            <input type="number" id="repsMax" placeholder="最大">
+        </div>
+    </div>
 
-        const exerciseLib = {
-            "Leg": ["RDL", "Back Squat", "Leg Press", "Split Squat", "Jump Box", "Leg Extension", "Leg Curl", "Hip Adduction"],
-            "Push": ["Bench Press", "Incline Bench Press", "Shoulder Press", "Dips", "Lateral Raise", "Triceps Extension", "Push Up", "Chest Press Machine"],
-            "Pull": ["Deadlift", "Pull Up", "Lat Pulldown", "Seated Row", "Barbell Row", "Face Pull", "Bicep Curl", "Hammer Curl"]
+    <button onclick="saveLog()">儲存紀錄</button>
+
+    <div id="status" class="log-display"></div>
+</div>
+
+<script>
+    // 1. 自動加入自定義動作到下拉清單
+    function addNewAction() {
+        const input = document.getElementById('newActionInput');
+        const select = document.getElementById('actionSelect');
+        const actionName = input.value.trim();
+
+        if (actionName === "") {
+            alert("請輸入動作名稱");
+            return;
+        }
+
+        // 檢查是否已存在
+        const exists = Array.from(select.options).some(opt => opt.value === actionName);
+        if (exists) {
+            alert("此動作已在清單中");
+            return;
+        }
+
+        // 創建新選項並加入
+        const newOption = document.createElement('option');
+        newOption.value = actionName;
+        newOption.text = actionName;
+        select.add(newOption);
+        
+        // 自動選中新加入的動作
+        select.value = actionName;
+        
+        // 清空輸入框
+        input.value = "";
+        alert(`已新增動作：${actionName}`);
+    }
+
+    // 儲存邏輯 (可對接你之前的 Google Sheets 串接)
+    function saveLog() {
+        const action = document.getElementById('actionSelect').value;
+        const weight = document.getElementById('weight').value;
+        const min = document.getElementById('repsMin').value;
+        const max = document.getElementById('repsMax').value;
+        const status = document.getElementById('status');
+
+        if (!weight || !min || !max) {
+            alert("請填寫完整數據");
+            return;
+        }
+
+        const logData = {
+            date: new Date().toLocaleDateString(),
+            action: action,
+            weight: weight,
+            reps: `${min}-${max}`
         };
 
-        let gymData = JSON.parse(localStorage.getItem('gymData_vFinal')) || { "Leg": [], "Push": [], "Pull": [] };
-        document.getElementById('inputDate').valueAsDate = new Date();
+        // 這裡可以放入你原本的 fetch 送出資料到 Google Sheets 的 code
+        console.log("儲存資料:", logData);
+        status.innerHTML = `✅ 已記錄：${logData.action} ${logData.weight}kg (${logData.reps} 次)`;
+    }
+</script>
 
-        window.onload = () => { updateExerciseOptions(); renderDisplay(); };
-
-        function updateExerciseOptions() {
-            const prog = document.getElementById('programSelect').value;
-            const exSelect = document.getElementById('exerciseSelect');
-            const options = exerciseLib[prog] || [];
-            let html = options.map(ex => `<option value="${ex}">${ex}</option>`).join('');
-            html += `<option value="CUSTOM">-- 手動輸入 --</option>`;
-            exSelect.innerHTML = html;
-            toggleCustomInput();
-            exSelect.onchange = toggleCustomInput;
-        }
-
-        function toggleCustomInput() {
-            const isCustom = document.getElementById('exerciseSelect').value === "CUSTOM";
-            document.getElementById('customExerciseBox').style.display = isCustom ? "block" : "none";
-        }
-
-        // 修改後的儲存邏輯
-        async function addData() {
-            const prog = document.getElementById('programSelect').value;
-            const date = document.getElementById('inputDate').value;
-            const exSelect = document.getElementById('exerciseSelect').value;
-            const ex = exSelect === "CUSTOM" ? document.getElementById('customExercise').value : exSelect;
-            const w = document.getElementById('weight').value;
-            const s = document.getElementById('sets').value;
-            const r = document.getElementById('reps').value;
-
-            if (!date || !ex || !w) return alert("請填寫必要資訊");
-
-            const record = { id: Date.now(), date, ex, w, s, r, prog };
-            
-            // 1. 本地儲存 (保證離線可用)
-            if (!gymData[prog]) gymData[prog] = [];
-            gymData[prog].unshift(record);
-            save();
-            renderDisplay();
-            
-            // 2. 清空輸入
-            document.getElementById('weight').value = '';
-            document.getElementById('sets').value = '';
-            document.getElementById('reps').value = '';
-
-            // 3. 雲端同步
-            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== '貼上你的Google網頁應用程式網址') {
-                document.getElementById('syncMsg').style.display = 'none';
-                try {
-                    // 使用 no-cors 模式確保簡單跨域傳輸
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        cache: 'no-cache',
-                        body: JSON.stringify(record)
-                    });
-                    document.getElementById('syncMsg').style.display = 'block';
-                    setTimeout(() => { document.getElementById('syncMsg').style.display = 'none'; }, 3000);
-                } catch (err) {
-                    console.error("雲端同步失敗", err);
-                }
-            }
-        }
-
-        function deleteRecord(prog, id) {
-            if (confirm("確定刪除？此操作僅影響本地顯示，雲端資料需手動刪除。")) {
-                gymData[prog] = gymData[prog].filter(item => item.id !== id);
-                save();
-                renderDisplay();
-            }
-        }
-
-        function renderDisplay(isFiltered = false) {
-            const area = document.getElementById('displayArea');
-            const filterVal = document.getElementById('filterDate').value;
-            area.innerHTML = '';
-            let allRecords = [];
-            Object.keys(gymData).forEach(pName => { gymData[pName].forEach(rec => allRecords.push(rec)); });
-            if (isFiltered && filterVal) { allRecords = allRecords.filter(r => r.date === filterVal); }
-            if (allRecords.length === 0) {
-                area.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:30px;">尚無紀錄 📭</div>`;
-                return;
-            }
-            const groupByDate = {};
-            allRecords.forEach(r => {
-                if (!groupByDate[r.date]) groupByDate[r.date] = {};
-                if (!groupByDate[r.date][r.prog]) groupByDate[r.date][r.prog] = [];
-                groupByDate[r.date][r.prog].push(r);
-            });
-            const sortedDates = Object.keys(groupByDate).sort((a, b) => new Date(b) - new Date(a));
-            sortedDates.forEach(date => {
-                const dateSection = document.createElement('div');
-                dateSection.className = 'date-container';
-                let html = `<div class="date-title">📅 ${date}</div>`;
-                Object.keys(groupByDate[date]).forEach(pName => {
-                    html += `<div class="program-group"><div class="program-title">📂 ${pName}</div>`;
-                    groupByDate[date][pName].forEach(item => {
-                        html += `
-                            <div class="exercise-item">
-                                <div class="ex-info">
-                                    <strong>${item.ex}</strong>
-                                    <span>${item.w}kg × ${item.s}組 × ${item.r}次</span>
-                                </div>
-                                <button class="btn-delete" onclick="deleteRecord('${pName}', ${item.id})">×</button>
-                            </div>`;
-                    });
-                    html += `</div>`;
-                });
-                dateSection.innerHTML = html;
-                area.appendChild(dateSection);
-            });
-        }
-
-        function save() { localStorage.setItem('gymData_vFinal', JSON.stringify(gymData)); }
-        function resetFilter() { document.getElementById('filterDate').value = ''; renderDisplay(); }
-        function exportData() {
-            const dataStr = JSON.stringify(gymData);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', 'gym_backup.json');
-            linkElement.click();
-        }
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    gymData = JSON.parse(e.target.result);
-                    save(); renderDisplay(); alert("匯入成功！");
-                } catch (err) { alert("無效的備份檔案"); }
-            };
-            reader.readAsText(file);
-        }
-    </script>
 </body>
 </html>
