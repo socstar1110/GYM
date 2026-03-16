@@ -3,51 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健身訓練紀錄</title>
+    <title>健身紀錄系統</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        body { font-family: -apple-system, sans-serif; background: #f4f4f9; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h2 { text-align: center; color: #333; }
         .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .flex-row { display: flex; gap: 10px; }
         .flex-item { flex: 1; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        .range-group { display: flex; gap: 8px; align-items: center; }
-        button { width: 100%; padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        button:active { background-color: #0056b3; }
-        .add-action-area { margin-top: 8px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px dashed #bbb; }
-        #addBtn { width: auto; background-color: #34c759; padding: 8px 15px; margin-top: 0; margin-left: 5px; font-size: 14px; }
-        .log-display { margin-top: 20px; font-size: 14px; color: #555; text-align: center; }
+        .range-group { display: flex; align-items: center; gap: 5px; }
+        .add-area { margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
+        .btn-main { width: 100%; padding: 15px; background: #007aff; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; }
+        .btn-add { background: #34c759; width: auto; padding: 10px; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>💪 訓練紀錄</h2>
+    <h2>🏋️ 訓練紀錄</h2>
 
     <div class="input-group">
-        <label>日期</label>
+        <label>訓練日期</label>
         <input type="date" id="inputDate">
     </div>
 
     <div class="input-group">
         <label>訓練主項</label>
         <select id="categorySelect" onchange="updateExerciseOptions()">
-            <option value="Leg">Leg (腿部)</option>
-            <option value="Push">Push (推系列)</option>
-            <option value="Pull">Pull (拉系列)</option>
+            <option value="Leg">Leg (下肢)</option>
+            <option value="Push">Push (推)</option>
+            <option value="Pull">Pull (拉)</option>
         </select>
     </div>
 
     <div class="input-group">
-        <label>選擇動作</label>
+        <label>動作名稱</label>
         <select id="actionSelect"></select>
-        
-        <div class="add-action-area">
-            <label style="font-size: 12px; color: #666;">找不到動作？手動新增至此分類</label>
+        <div class="add-area">
+            <label style="font-size: 12px;">手動新增動作至此分類：</label>
             <div style="display: flex;">
-                <input type="text" id="newActionInput" placeholder="動作名稱">
-                <button type="button" id="addBtn" onclick="addNewAction()">新增</button>
+                <input type="text" id="newActionInput" placeholder="例如：保加利亞蹲">
+                <button class="btn-main btn-add" onclick="addNewAction()">新增</button>
             </div>
         </div>
     </div>
@@ -55,115 +53,109 @@
     <div class="flex-row">
         <div class="input-group flex-item">
             <label>重量 (kg)</label>
-            <input type="number" id="weight" placeholder="0" step="0.5">
+            <input type="number" id="weight" step="0.5">
         </div>
         <div class="input-group flex-item">
             <label>組數 (Sets)</label>
-            <input type="number" id="sets" placeholder="0">
+            <input type="number" id="sets">
         </div>
     </div>
 
     <div class="input-group">
-        <label>單組次數範圍 (Reps)</label>
+        <label>次數範圍 (Reps Range)</label>
         <div class="range-group">
-            <input type="number" id="repsMin" placeholder="最小">
+            <input type="number" id="repsMin" placeholder="Min">
             <span>~</span>
-            <input type="number" id="repsMax" placeholder="最大">
+            <input type="number" id="repsMax" placeholder="Max">
         </div>
     </div>
 
-    <button onclick="saveLog()">儲存紀錄</button>
-
-    <div id="status" class="log-display"></div>
+    <button class="btn-main" onclick="saveLog()">儲存本次訓練</button>
+    <div id="status" style="margin-top:15px; text-align:center; font-size:12px; color: #666;"></div>
 </div>
 
 <script>
-    // 動作庫
-    const exerciseLib = {
-        "Leg": ["RDL", "Back Squat", "Leg Press", "Split Squat", "Jump Box", "Leg Extension", "Leg Curl", "Hip Adduction"],
-        "Push": ["Bench Press", "Incline Bench Press", "Shoulder Press", "Dips", "Lateral Raise", "Triceps Extension", "Push Up", "Chest Press Machine"],
-        "Pull": ["Deadlift", "Pull Up", "Lat Pulldown", "Seated Row", "Barbell Row", "Face Pull", "Bicep Curl", "Hammer Curl"]
-    };
+    const GAS_URL = "你的_WEB_APP_URL"; // ⚠️ 請更換為你的部署網址
+    let exerciseLib = {};
 
-    // 初始化：設定今日日期、更新動作清單
+    // [Function 1] 初始化：設定日期並從 Google 抓取最新動作庫
     window.onload = function() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('inputDate').value = today;
-        updateExerciseOptions();
+        document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+        refreshLibrary();
     };
 
-    // 更新動作下拉選單
+    // [Function 2] 從雲端重新獲取最新的動作清單數據
+    function refreshLibrary() {
+        document.getElementById('status').innerText = "正在從雲端更新動作庫...";
+        fetch(`${GAS_URL}?type=getLib`)
+            .then(res => res.json())
+            .then(data => {
+                exerciseLib = data;
+                updateExerciseOptions();
+                document.getElementById('status').innerText = "雲端同步完成";
+            })
+            .catch(err => alert("讀取失敗，請檢查網路或 GAS URL"));
+    }
+
+    // [Function 3] 根據選取的分類 (Leg/Push/Pull) 動態更新動作下拉選單
     function updateExerciseOptions() {
         const category = document.getElementById('categorySelect').value;
         const actionSelect = document.getElementById('actionSelect');
-        
-        // 清空現有選項
         actionSelect.innerHTML = "";
         
-        // 加入該分類的動作
-        exerciseLib[category].forEach(ex => {
-            const opt = document.createElement('option');
-            opt.value = ex;
-            opt.text = ex;
-            actionSelect.add(opt);
+        if (exerciseLib[category]) {
+            exerciseLib[category].forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex;
+                opt.text = ex;
+                actionSelect.add(opt);
+            });
+        }
+    }
+
+    // [Function 4] 將新動作傳送到雲端 Library 並刷新清單
+    function addNewAction() {
+        const category = document.getElementById('categorySelect').value;
+        const actionName = document.getElementById('newActionInput').value.trim();
+        if (!actionName) return;
+
+        document.getElementById('status').innerText = "正在新增動作...";
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ type: "addNewAction", category: category, action: actionName })
+        }).then(() => {
+            setTimeout(refreshLibrary, 1200); // 延遲刷新以確保雲端已寫入
+            document.getElementById('newActionInput').value = "";
         });
     }
 
-    // 功能 1: 手動新增動作並加入清單
-    function addNewAction() {
-        const category = document.getElementById('categorySelect').value;
-        const input = document.getElementById('newActionInput');
-        const actionName = input.value.trim();
-
-        if (!actionName) {
-            alert("請輸入動作名稱");
-            return;
-        }
-
-        // 同步更新至記憶體中的 exerciseLib
-        if (!exerciseLib[category].includes(actionName)) {
-            exerciseLib[category].push(actionName);
-            updateExerciseOptions(); // 重新整理下拉選單
-            
-            // 選取剛新增的動作
-            document.getElementById('actionSelect').value = actionName;
-            input.value = "";
-        } else {
-            alert("此動作已存在");
-        }
-    }
-
-    // 儲存邏輯
+    // [Function 5] 儲存正式訓練紀錄至雲端 Log
     function saveLog() {
-        const date = document.getElementById('inputDate').value;
-        const category = document.getElementById('categorySelect').value;
-        const action = document.getElementById('actionSelect').value;
-        const weight = document.getElementById('weight').value;
-        const sets = document.getElementById('sets').value;
-        const min = document.getElementById('repsMin').value;
-        const max = document.getElementById('repsMax').value;
-
-        if (!weight || !sets || !min || !max) {
-            alert("請填寫所有欄位");
-            return;
-        }
-
         const logData = {
-            date: date,
-            category: category,
-            action: action,
-            weight: weight + " kg",
-            sets: sets + " 組",
-            reps: `${min}-${max} 次`
+            id: "MyiPhone", // 可自行修改標記
+            date: document.getElementById('inputDate').value,
+            prog: document.getElementById('categorySelect').value,
+            ex: document.getElementById('actionSelect').value,
+            w: document.getElementById('weight').value,
+            s: document.getElementById('sets').value,
+            r: `${document.getElementById('repsMin').value}-${document.getElementById('repsMax').value}`
         };
 
-        console.log("準備儲存:", logData);
-        
-        // 狀態顯示
-        const status = document.getElementById('status');
-        status.innerHTML = `✅ 已成功記錄：<br>${date} - ${action}<br>${weight}kg / ${sets}組 / ${logData.reps}`;
-        
-        // 這裡可以接續你的 Google Sheets fetch 程式碼
+        if(!logData.w || !logData.s || !document.getElementById('repsMin').value) {
+            alert("請填寫完整數據");
+            return;
+        }
+
+        document.getElementById('status').innerText = "正在儲存紀錄...";
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(logData)
+        })
+        .then(res => res.text())
+        .then(msg => {
+            alert(msg);
+            document.getElementById('status').innerText = "最後儲存時間: " + new Date().toLocaleTimeString();
+        });
     }
 </script>
 
