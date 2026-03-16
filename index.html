@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>健身訓練紀錄</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f4f9; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .range-group { display: flex; gap: 10px; align-items: center; }
-        .range-group input { width: 45%; }
-        button { width: 100%; padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-item { flex: 1; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .range-group { display: flex; gap: 8px; align-items: center; }
+        button { width: 100%; padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 10px; }
         button:active { background-color: #0056b3; }
-        .add-action-area { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
-        #newActionInput { width: 70%; margin-right: 5%; }
-        #addBtn { width: 25%; background-color: #34c759; padding: 10px; font-size: 14px; }
-        .log-display { margin-top: 20px; font-size: 14px; color: #555; }
+        .add-action-area { margin-top: 8px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px dashed #bbb; }
+        #addBtn { width: auto; background-color: #34c759; padding: 8px 15px; margin-top: 0; margin-left: 5px; font-size: 14px; }
+        .log-display { margin-top: 20px; font-size: 14px; color: #555; text-align: center; }
     </style>
 </head>
 <body>
@@ -26,29 +26,45 @@
     <h2>💪 訓練紀錄</h2>
 
     <div class="input-group">
-        <label for="actionSelect">選擇動作</label>
-        <select id="actionSelect">
-            <option value="Back Squat">Back Squat (後蹲)</option>
-            <option value="RDL">RDL (羅馬尼亞硬舉)</option>
-            <option value="Leg Press">Leg Press (腿推)</option>
+        <label>日期</label>
+        <input type="date" id="inputDate">
+    </div>
+
+    <div class="input-group">
+        <label>訓練主項</label>
+        <select id="categorySelect" onchange="updateExerciseOptions()">
+            <option value="Leg">Leg (腿部)</option>
+            <option value="Push">Push (推系列)</option>
+            <option value="Pull">Pull (拉系列)</option>
         </select>
+    </div>
+
+    <div class="input-group">
+        <label>選擇動作</label>
+        <select id="actionSelect"></select>
         
         <div class="add-action-area">
-            <label>找不到動作？手動新增</label>
+            <label style="font-size: 12px; color: #666;">找不到動作？手動新增至此分類</label>
             <div style="display: flex;">
-                <input type="text" id="newActionInput" placeholder="輸入動作名稱">
+                <input type="text" id="newActionInput" placeholder="動作名稱">
                 <button type="button" id="addBtn" onclick="addNewAction()">新增</button>
             </div>
         </div>
     </div>
 
-    <div class="input-group">
-        <label>重量 (kg)</label>
-        <input type="number" id="weight" placeholder="0">
+    <div class="flex-row">
+        <div class="input-group flex-item">
+            <label>重量 (kg)</label>
+            <input type="number" id="weight" placeholder="0" step="0.5">
+        </div>
+        <div class="input-group flex-item">
+            <label>組數 (Sets)</label>
+            <input type="number" id="sets" placeholder="0">
+        </div>
     </div>
 
     <div class="input-group">
-        <label>次數範圍 (Reps Range)</label>
+        <label>單組次數範圍 (Reps)</label>
         <div class="range-group">
             <input type="number" id="repsMin" placeholder="最小">
             <span>~</span>
@@ -62,61 +78,92 @@
 </div>
 
 <script>
-    // 1. 自動加入自定義動作到下拉清單
+    // 動作庫
+    const exerciseLib = {
+        "Leg": ["RDL", "Back Squat", "Leg Press", "Split Squat", "Jump Box", "Leg Extension", "Leg Curl", "Hip Adduction"],
+        "Push": ["Bench Press", "Incline Bench Press", "Shoulder Press", "Dips", "Lateral Raise", "Triceps Extension", "Push Up", "Chest Press Machine"],
+        "Pull": ["Deadlift", "Pull Up", "Lat Pulldown", "Seated Row", "Barbell Row", "Face Pull", "Bicep Curl", "Hammer Curl"]
+    };
+
+    // 初始化：設定今日日期、更新動作清單
+    window.onload = function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('inputDate').value = today;
+        updateExerciseOptions();
+    };
+
+    // 更新動作下拉選單
+    function updateExerciseOptions() {
+        const category = document.getElementById('categorySelect').value;
+        const actionSelect = document.getElementById('actionSelect');
+        
+        // 清空現有選項
+        actionSelect.innerHTML = "";
+        
+        // 加入該分類的動作
+        exerciseLib[category].forEach(ex => {
+            const opt = document.createElement('option');
+            opt.value = ex;
+            opt.text = ex;
+            actionSelect.add(opt);
+        });
+    }
+
+    // 功能 1: 手動新增動作並加入清單
     function addNewAction() {
+        const category = document.getElementById('categorySelect').value;
         const input = document.getElementById('newActionInput');
-        const select = document.getElementById('actionSelect');
         const actionName = input.value.trim();
 
-        if (actionName === "") {
+        if (!actionName) {
             alert("請輸入動作名稱");
             return;
         }
 
-        // 檢查是否已存在
-        const exists = Array.from(select.options).some(opt => opt.value === actionName);
-        if (exists) {
-            alert("此動作已在清單中");
-            return;
+        // 同步更新至記憶體中的 exerciseLib
+        if (!exerciseLib[category].includes(actionName)) {
+            exerciseLib[category].push(actionName);
+            updateExerciseOptions(); // 重新整理下拉選單
+            
+            // 選取剛新增的動作
+            document.getElementById('actionSelect').value = actionName;
+            input.value = "";
+        } else {
+            alert("此動作已存在");
         }
-
-        // 創建新選項並加入
-        const newOption = document.createElement('option');
-        newOption.value = actionName;
-        newOption.text = actionName;
-        select.add(newOption);
-        
-        // 自動選中新加入的動作
-        select.value = actionName;
-        
-        // 清空輸入框
-        input.value = "";
-        alert(`已新增動作：${actionName}`);
     }
 
-    // 儲存邏輯 (可對接你之前的 Google Sheets 串接)
+    // 儲存邏輯
     function saveLog() {
+        const date = document.getElementById('inputDate').value;
+        const category = document.getElementById('categorySelect').value;
         const action = document.getElementById('actionSelect').value;
         const weight = document.getElementById('weight').value;
+        const sets = document.getElementById('sets').value;
         const min = document.getElementById('repsMin').value;
         const max = document.getElementById('repsMax').value;
-        const status = document.getElementById('status');
 
-        if (!weight || !min || !max) {
-            alert("請填寫完整數據");
+        if (!weight || !sets || !min || !max) {
+            alert("請填寫所有欄位");
             return;
         }
 
         const logData = {
-            date: new Date().toLocaleDateString(),
+            date: date,
+            category: category,
             action: action,
-            weight: weight,
-            reps: `${min}-${max}`
+            weight: weight + " kg",
+            sets: sets + " 組",
+            reps: `${min}-${max} 次`
         };
 
-        // 這裡可以放入你原本的 fetch 送出資料到 Google Sheets 的 code
-        console.log("儲存資料:", logData);
-        status.innerHTML = `✅ 已記錄：${logData.action} ${logData.weight}kg (${logData.reps} 次)`;
+        console.log("準備儲存:", logData);
+        
+        // 狀態顯示
+        const status = document.getElementById('status');
+        status.innerHTML = `✅ 已成功記錄：<br>${date} - ${action}<br>${weight}kg / ${sets}組 / ${logData.reps}`;
+        
+        // 這裡可以接續你的 Google Sheets fetch 程式碼
     }
 </script>
 
